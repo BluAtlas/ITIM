@@ -6,22 +6,30 @@ import (
 	"image/draw"
 	_ "image/jpeg"
 	"image/png"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/nfnt/resize"
 )
 
-var PHONE string
 var PHONESIZEX int
 var PHONESIZEY int
 var APPSIZE int
 var FROMTOP int
 var FROMLEFT int
 var FROMBOTTOM int
-var BETWEEN int
+var BETWEENX int
+var BETWEENY int
+var FROMLEFTDOCK int
+var MAXAPPS int
+var DOCKCOUNT int
+var APPCOUNT int
 
 func main() {
+	// set log flags
+	log.SetFlags(log.Lshortfile)
 	// check for args
 	if len(os.Args) != 2 {
 		log.Fatalf("Need an argument, '1' for pro max, '2' for mini\n")
@@ -30,49 +38,71 @@ func main() {
 	// set global variables based on args
 	switch os.Args[1] {
 	case "1":
-		PHONE = "12px"
-		PHONESIZEX = 1080
-		PHONESIZEY = 2340
+		PHONESIZEX = 1284
+		PHONESIZEY = 2778
 		APPSIZE = 192
 		FROMTOP = 246
 		FROMLEFT = 105
-		BETWEEN = 102
+		BETWEENX = 102
+		BETWEENY = 126
 		FROMBOTTOM = 105
+		FROMLEFTDOCK = 252
+		MAXAPPS = 24
+		DOCKCOUNT = 3
 	case "2":
-		PHONE = "12m"
-		PHONESIZEX = 1284
-		PHONESIZEY = 2778
+		PHONESIZEX = 1080
+		PHONESIZEY = 2340
 		APPSIZE = 180
 		FROMTOP = 387
 		FROMLEFT = 81
-		BETWEEN = 81
+		BETWEENX = 81
+		BETWEENY = 105
 		FROMBOTTOM = 81
+		FROMLEFTDOCK = 81
+		MAXAPPS = 24
+		DOCKCOUNT = 4
 	}
 
+	// ensure all dirs exist
+	newpath := filepath.Join("input")
+	err := os.MkdirAll(newpath, os.ModePerm)
+	check(err)
+	newpath = filepath.Join("output")
+	err = os.MkdirAll(newpath, os.ModePerm)
+	check(err)
+	newpath = filepath.Join("input/icons")
+	err = os.MkdirAll(newpath, os.ModePerm)
+	check(err)
+	newpath = filepath.Join("output/icons")
+	err = os.MkdirAll(newpath, os.ModePerm)
+	check(err)
+
+	// create temp dir
+	os.RemoveAll("temp")
+	err = os.Mkdir("temp", 0755)
+	check(err)
+	defer os.RemoveAll("temp")
+
 	// read background image
-	reader, err := os.Open("images/background.jpg")
-	if err != nil {
-		log.Fatal(err)
-	}
+	reader, err := os.Open("input/background.jpg")
+	check(err)
 	m, _, err := image.Decode(reader)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 
 	// resize the image, convert to a RGBA image
 	m = ResizeImage(m)
 
+	// create resized icons in temp dir
 	ResizeIcons()
 
+	// take pixels from background to create app squares, then overlay temp icons
+	CreateIcons(m)
+
 	// write the image to disk
-	f, err := os.Create("images/outimage.png")
-	if err != nil {
-		log.Fatal(err)
-	}
+	f, err := os.Create("output/background.png")
+	check(err)
 	err = png.Encode(f, m)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 }
 
 // resizes the background image to fit iphones aspect ratio, and changes format to RGBA
@@ -101,6 +131,8 @@ func ResizeImage(m image.Image) image.Image {
 	} else {
 		fmt.Printf("Image correct size.\n")
 	}
+
+	//create new zero point
 	point := image.Point{}
 	if height < m.Bounds().Max.Y-m.Bounds().Min.Y {
 		// if height changed, adjust new zero point
@@ -124,5 +156,80 @@ func ResizeImage(m image.Image) image.Image {
 }
 
 func ResizeIcons() {
+	// open directory for looping
+	files, err := ioutil.ReadDir("input/icons")
+	check(err)
 
+	for _, file := range files { // for file in directory
+		// open file into reader
+		reader, err := os.Open(fmt.Sprintf("input/icons/%v", file.Name()))
+		check(err)
+		defer reader.Close()
+		// decode reader as image
+		m, _, err := image.Decode(reader)
+		check(err)
+
+		//resize image read
+		m = resize.Resize(uint(APPSIZE), uint(APPSIZE), m, resize.Lanczos3)
+
+		// write the resized image to disk
+		f, err := os.Create(fmt.Sprintf("temp/%v", file.Name()))
+		check(err)
+		err = png.Encode(f, m)
+		check(err)
+
+		//increase app count
+		APPCOUNT++
+	}
+}
+
+func CreateIcons(m image.Image) {
+	// open directory for looping
+	files, err := ioutil.ReadDir("temp")
+	check(err)
+
+	// get starting point based off global variables
+	cpoint := image.Point{X: m.Bounds().Min.X + FROMLEFT, Y: m.Bounds().Min.Y + FROMTOP}
+	i := 0
+	for _, file := range files { // for file in directory
+		i++
+		// open file into reader
+		reader, err := os.Open(fmt.Sprintf("temp/%v", file.Name()))
+		check(err)
+		defer reader.Close()
+		// decode reader as image
+		n, _, err := image.Decode(reader)
+		check(err)
+
+		// create blank icon image, and draw onto it from background and icon overlay
+		icon := image.NewRGBA(image.Rect(0, 0, APPSIZE, APPSIZE))
+		draw.Draw(icon, icon.Bounds(), m, cpoint, draw.Over)
+		draw.Draw(icon, icon.Bounds(), n, image.Point{X: icon.Bounds().Min.X, Y: icon.Bounds().Min.Y}, draw.Over)
+
+		// write the icon to disk
+		f, err := os.Create(fmt.Sprintf("output/icons/%v", file.Name()))
+		check(err)
+		err = png.Encode(f, icon)
+		check(err)
+
+		cpoint.X += BETWEENX + APPSIZE
+		if i == APPCOUNT-DOCKCOUNT { // if the remaining icons are for the dock
+			cpoint.Y = m.Bounds().Max.Y - FROMBOTTOM - APPSIZE
+			cpoint.X = m.Bounds().Min.X + FROMLEFTDOCK
+		} else if i > APPCOUNT-DOCKCOUNT {
+		} else if i%4 == 0 { // move down to next row every four
+			cpoint.Y += BETWEENY + APPSIZE
+			cpoint.X = m.Bounds().Min.X + FROMLEFT
+			if i%MAXAPPS == 0 { // if we're out of space on current page, move to next page
+				cpoint.Y = m.Bounds().Min.Y + FROMTOP
+			}
+		}
+
+	}
+}
+
+func check(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }

@@ -1,4 +1,4 @@
-module github.com/funbrain29/ibe
+module github.com/funbrain29/ITIM
 
 go 1.13
 
