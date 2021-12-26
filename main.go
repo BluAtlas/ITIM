@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/nfnt/resize"
 )
@@ -26,41 +27,69 @@ var FROMLEFTDOCK int
 var MAXAPPS int
 var DOCKCOUNT int
 var APPCOUNT int
+var FILETYPE string
 
 func main() {
 	// set log flags
 	log.SetFlags(log.Lshortfile)
 	// check for args
-	if len(os.Args) != 2 {
-		log.Fatalf("Need an argument, '1' for pro max, '2' for mini\n")
+	if len(os.Args) < 2 {
+		log.Fatalf("Wrong arguments, '1 [jpg or png]' for 12 pro max, '2 [jpg or png]' for 12 mini,\n\tor see the README for custom sizing information\n")
 	}
 
 	// set global variables based on args
-	switch os.Args[1] {
-	case "1":
-		PHONESIZEX = 1284
-		PHONESIZEY = 2778
-		APPSIZE = 192
-		FROMTOP = 246
-		FROMLEFT = 105
-		BETWEENX = 102
-		BETWEENY = 126
-		FROMBOTTOM = 105
-		FROMLEFTDOCK = 252
-		MAXAPPS = 24
-		DOCKCOUNT = 3
-	case "2":
-		PHONESIZEX = 1080
-		PHONESIZEY = 2340
-		APPSIZE = 180
-		FROMTOP = 387
-		FROMLEFT = 81
-		BETWEENX = 81
-		BETWEENY = 105
-		FROMBOTTOM = 81
-		FROMLEFTDOCK = 81
-		MAXAPPS = 24
-		DOCKCOUNT = 4
+	if len(os.Args) == 3 {
+		switch os.Args[1] {
+		case "1":
+			PHONESIZEX = 1284
+			PHONESIZEY = 2778
+			APPSIZE = 192
+			FROMTOP = 246
+			FROMLEFT = 105
+			BETWEENX = 102
+			BETWEENY = 126
+			FROMBOTTOM = 105
+			FROMLEFTDOCK = 252
+			MAXAPPS = 24
+			DOCKCOUNT = 3
+		case "2":
+			PHONESIZEX = 1125
+			PHONESIZEY = 2436
+			APPSIZE = 180
+			FROMTOP = 231
+			FROMLEFT = 81
+			BETWEENX = 81
+			BETWEENY = 105
+			FROMBOTTOM = 81
+			FROMLEFTDOCK = 81
+			MAXAPPS = 24
+			DOCKCOUNT = 4
+		}
+		FILETYPE = os.Args[2]
+	} else {
+		if len(os.Args) != 13 {
+			log.Fatalf("Wrong arguments, '1' for pro max, '2' for mini,\n\tor see the README for custom sizing information\n")
+		}
+		var args []int
+		for i, arg := range os.Args {
+			if i > 1 {
+				val, err := strconv.Atoi(arg)
+				check(err)
+				args = append(args, val)
+			}
+		}
+		FILETYPE = os.Args[1]
+		PHONESIZEX = args[0]
+		PHONESIZEY = args[1]
+		APPSIZE = args[2]
+		FROMTOP = args[3]
+		FROMLEFT = args[4]
+		BETWEENX = args[5]
+		BETWEENY = args[6]
+		FROMBOTTOM = args[7]
+		FROMLEFTDOCK = args[8]
+		MAXAPPS = args[9]
+		DOCKCOUNT = args[10]
 	}
 
 	// ensure all dirs exist
@@ -84,7 +113,7 @@ func main() {
 	defer os.RemoveAll("temp")
 
 	// read background image
-	reader, err := os.Open("input/background.jpg")
+	reader, err := os.Open(fmt.Sprintf("input/background.%v", FILETYPE))
 	check(err)
 	m, _, err := image.Decode(reader)
 	check(err)
