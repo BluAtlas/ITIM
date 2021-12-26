@@ -28,3 +28,5 @@ Then run one of the following commands:
     FROMLEFTDOCK should be the amount of pixels between the left side of the image and the left most app on the dock
     MAXAPPS should be the maximum number of apps that can be shown on screen, not including the dock
     DOCKCOUNT should be the amount of apps on your dock
+
+The output folder will contain all the new icons, a resized background.png, and a sample.png to give an idea what the icons should look like.

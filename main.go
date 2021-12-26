@@ -125,12 +125,18 @@ func main() {
 	ResizeIcons()
 
 	// take pixels from background to create app squares, then overlay temp icons
-	CreateIcons(m)
+	s := CreateIcons(m)
 
 	// write the image to disk
 	f, err := os.Create("output/background.png")
 	check(err)
 	err = png.Encode(f, m)
+	check(err)
+
+	// write the sample iamge to disk
+	f, err = os.Create("output/sample.png")
+	check(err)
+	err = png.Encode(f, s)
 	check(err)
 }
 
@@ -212,7 +218,11 @@ func ResizeIcons() {
 	}
 }
 
-func CreateIcons(m image.Image) {
+func CreateIcons(m image.Image) *image.RGBA {
+	// create sample file
+	s := image.NewRGBA(image.Rect(m.Bounds().Min.X, m.Bounds().Min.Y, m.Bounds().Max.X, m.Bounds().Max.Y))
+	draw.Draw(s, s.Bounds(), m, image.Point{X: m.Bounds().Min.X, Y: m.Bounds().Min.Y}, draw.Src)
+
 	// open directory for looping
 	files, err := ioutil.ReadDir("temp")
 	check(err)
@@ -229,6 +239,11 @@ func CreateIcons(m image.Image) {
 		// decode reader as image
 		n, _, err := image.Decode(reader)
 		check(err)
+
+		// draw icon onto sample
+		draw.Draw(s, image.Rectangle{Min: cpoint,
+			Max: image.Point{X: cpoint.X + APPSIZE, Y: cpoint.Y + APPSIZE}},
+			n, image.Point{X: n.Bounds().Min.X, Y: n.Bounds().Min.Y}, draw.Over)
 
 		// create blank icon image, and draw onto it from background and icon overlay
 		icon := image.NewRGBA(image.Rect(0, 0, APPSIZE, APPSIZE))
@@ -255,6 +270,7 @@ func CreateIcons(m image.Image) {
 		}
 
 	}
+	return s
 }
 
 func check(err error) {
