@@ -15,7 +15,7 @@ Then run one of the following commands:
     ./ITIM 2 ['png' or 'jpg']
 
     To create icons for a custom sizing:
-    ./ITIM [FILETYPE PHONESIZEX PHONESIZEY APPSIZE FROMTOP FROMLEFT BETWEENX BETWEENY FROMBOTTOM FROMLEFTDOCK MAXAPPS DOCKCOUNT]
+    ./ITIM FILETYPE PHONESIZEX PHONESIZEY APPSIZE FROMTOP FROMLEFT BETWEENX BETWEENY FROMBOTTOM FROMLEFTDOCK MAXAPPS DOCKCOUNT
 
     FILETYPE is either 'png'or 'jpg'
     PHONESIZEX and PHONESIZEY should match the resolution of a screenshot from the desired phone
